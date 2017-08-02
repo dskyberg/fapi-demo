@@ -1,0 +1,17 @@
+---
+intermediate:
+  key_size: 4096
+  key_type: 'RSA'
+  days: 3650
+  digest: 'sha256'
+  v3Exts:
+    - name: 'subjectKeyIdentifier'
+      value: 'hash'
+    - name: 'authorityKeyIdentifier'
+      value: 'keyid:always'
+    - name: 'basicConstraints'
+      critical: True
+      value: 'CA:true, pathlen:0'
+    - name: 'keyUsage'
+      critical: True
+      value: 'digitalSignature, cRLSign, keyCertSign'

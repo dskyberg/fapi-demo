@@ -28,17 +28,17 @@
 - name: "Set privatekey facts for {{ email }}"
   set_fact:
     # If the service does not specify key_[type size] or days, use the default root (if self signed), or default intermediate
-    key_type: "{{ user | getattr(['ssl', 'key_type']) or ssl.conf.user.key_type }}"
-    key_size: "{{ user | getattr(['ssl', 'key_size']) or ssl.conf.user.key_size }}"
-    days: "{{ user | getattr(['ssl', 'days']) or ssl.conf.user.days }}"
+    key_type: "{{ user | getattr(['ssl', 'key_type']) or ssl.user.key_type }}"
+    key_size: "{{ user | getattr(['ssl', 'key_size']) or ssl.user.key_size }}"
+    days: "{{ user | getattr(['ssl', 'days']) or ssl.user.days }}"
   tags: ['create_ssl_users', 'create_ssl']
 
 - name: "Set DN facts for {{ email }}"
   set_fact:
     # If the user does not specifiy the address components, use the defaults.
-    countryName: "{{ user | getattr(['address', 'country']) or subject | getattr(['address', 'country'], ssl.conf.dn.countryName) }}"
-    stateOrProvinceName: "{{ user | getattr(['address', 'stateOrProvince']) or subject | getattr(['address', 'stateOrProvince'], ssl.conf.dn.stateOrProvinceName) }}"
-    localityName: "{{ user | getattr(['address', 'locality']) or subject | getattr(['address', 'locality'], ssl.conf.dn.localityName) }}"
+    countryName: "{{ user | getattr(['address', 'country']) or subject | getattr(['address', 'country'], ssl.dn.countryName) }}"
+    stateOrProvinceName: "{{ user | getattr(['address', 'stateOrProvince']) or subject | getattr(['address', 'stateOrProvince'], ssl.dn.stateOrProvinceName) }}"
+    localityName: "{{ user | getattr(['address', 'locality']) or subject | getattr(['address', 'locality'], ssl.dn.localityName) }}"
     # If not specified, set the commonName to the email
     commonName: "{{ user | getattr(['ssl', 'commonName'], email) }}"
   tags: ['create_ssl_users', 'create_ssl']
@@ -50,7 +50,7 @@
 
 - name: "Set X509v3 Extension facts for {{ email }}"
   set_fact:
-    v3Exts: "{{ user | getattr(['ssl','v3Exts'], []) | merge_nv_lists(ssl.conf.user.v3Exts, False) | merge_nv_lists([{'name':'subjectAltName','value': subjectAltName}], True) }}"
+    v3Exts: "{{ user | getattr(['ssl','v3Exts'], []) | merge_nv_lists(ssl.user.v3Exts, False) | merge_nv_lists([{'name':'subjectAltName','value': subjectAltName}], True) }}"
   tags: ['create_ssl_users', 'create_ssl']
 
 - name: "Generate SSL Private Key for {{ commonName }}"
@@ -66,7 +66,7 @@
   openssl_csr_ext:
     state: present
     force: "{{ ssl_pkey_result | changed }}"
-    digest: "{{ user | getattr(['ssl', 'digest']) or ssl.conf.user.digest }}"
+    digest: "{{ user | getattr(['ssl', 'digest']) or ssl.user.digest }}"
     version: 3
     privatekey_path: "{{subject_certs_dir}}/{{ commonName }}.{{ ssl.conf.exts.key }}"
     countryName: "{{ countryName }}"

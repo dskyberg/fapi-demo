@@ -1,0 +1,24 @@
+---
+server:
+  key_size: 2048
+  key_type: 'RSA'
+  days: 730
+  digest: 'sha256'
+  v3Exts:
+    - name: subjectAltName
+      value: 'change-me'
+    - name: 'subjectKeyIdentifier'
+      value: 'hash'
+    - name: 'authorityKeyIdentifier'
+      value: 'keyid:always'
+    - name: 'basicConstraints'
+      value: 'CA:false'
+    - name: 'keyUsage'
+      critical: True
+      value: 'digitalSignature, keyEncipherment'
+    - name: 'nsCertType'
+      value: 'server'
+    - name: nsComment
+      value: "OpenSSL Generated Server Certificate"
+    - name: 'extendedKeyUsage'
+      value: 'serverAuth'

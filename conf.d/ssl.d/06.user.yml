@@ -1,0 +1,24 @@
+---
+user:
+  key_size: 2048
+  key_type: 'RSA'
+  days: 365
+  digest: 'sha256'
+  v3Exts:
+    - name: subjectAltName
+      value: 'change-me'
+    - name: subjectKeyIdentifier
+      value: hash
+    - name: authorityKeyIdentifier
+      value: 'keyid, issuer'
+    - name: basicConstraints
+      value: 'CA:false'
+    - name: keyUsage
+      critical: True
+      value: 'nonRepudiation, digitalSignature, keyEncipherment'
+    - name: nsCertType
+      value: 'client, email'
+    - name: nsComment
+      value: "OpenSSL Generated Server Certificate"
+    - name: extendedKeyUsage
+      value: 'clientAuth, emailProtection'

@@ -8,35 +8,35 @@
 
 - name: "Update SSL root ca cert for {{ service.name }}"
   copy:
-    src: "{{ out_dir }}/{{ ssl.conf.dir }}/{{ players.root_ca.domain }}/ca/ca.{{ players.root_ca.domain }}.{{ ssl.conf.exts.cert }}"
+    src: "{{ out_dir }}/{{ project.sslDir }}/{{ players.root_ca.domain }}/ca/ca.{{ players.root_ca.domain }}.{{ ssl.conf.exts.cert }}"
     dest: "{{service_path}}/.tmp/ssl/root.cert.pem"
   when: (service.name in with_services or 'all' in with_services) and service | getattr('ssl', False)
   tags: ['build_context', 'build_ssl']
 
 - name: "Update SSL intermediate ca cert for {{ service.name }}"
   copy:
-    src: "{{ out_dir }}/{{ ssl.conf.dir }}/{{ players[service.player].domain }}/ca/ca.{{ players[service.player].domain }}.{{ ssl.conf.exts.cert }}"
+    src: "{{ out_dir }}/{{ project.sslDir }}/{{ players[service.player].domain }}/ca/ca.{{ players[service.player].domain }}.{{ ssl.conf.exts.cert }}"
     dest: "{{service_path}}/.tmp/ssl/ca.{{ players[service.player].domain }}.{{ ssl.conf.exts.cert }}"
   when: (service.name in with_services or 'all' in with_services) and service | getattr('ssl', False)
   tags: ['build_context', 'build_ssl']
 
 - name: "Update SSL chain cert for {{ service.name }}"
   copy:
-    src: "{{ out_dir }}/{{ ssl.conf.dir }}/{{ players[service.player].domain }}/certs/{{ service.service }}.{{ players[service.player].domain }}.chain.{{ ssl.conf.exts.cert }}"
+    src: "{{ out_dir }}/{{ project.sslDir }}/{{ players[service.player].domain }}/certs/{{ service.service }}.{{ players[service.player].domain }}.chain.{{ ssl.conf.exts.cert }}"
     dest: "{{service_path}}/.tmp/ssl/{{ service.service }}.{{ players[service.player].domain }}.chain.{{ ssl.conf.exts.cert }}"
   when: (service.name in with_services or 'all' in with_services) and service | getattr('ssl', False)
   tags: ['build_context', 'build_ssl']
 
 - name: "Update SSL server/user certs for {{ service.name }}"
   copy:
-    src: "{{ out_dir }}/{{ ssl.conf.dir }}/{{ players[service.player].domain }}/certs/{{ service.service }}.{{ players[service.player].domain }}.{{ ssl.conf.exts.cert }}"
+    src: "{{ out_dir }}/{{ project.sslDir }}/{{ players[service.player].domain }}/certs/{{ service.service }}.{{ players[service.player].domain }}.{{ ssl.conf.exts.cert }}"
     dest: "{{service_path}}/.tmp/ssl/{{ service.service }}.{{ players[service.player].domain }}.{{ ssl.conf.exts.cert }}"
   when: (service.name in with_services or 'all' in with_services) and service | getattr('ssl', False)
   tags: ['build_context', 'build_ssl']
 
 - name: "Update SSL server/user keys for {{ service.name }}"
   copy:
-    src: "{{ out_dir }}/{{ ssl.conf.dir }}//{{ players[service.player].domain }}/certs/{{ service.service }}.{{ players[service.player].domain }}.{{ ssl.conf.exts.key }}"
+    src: "{{ out_dir }}/{{ project.sslDir }}//{{ players[service.player].domain }}/certs/{{ service.service }}.{{ players[service.player].domain }}.{{ ssl.conf.exts.key }}"
     dest: "{{service_path}}/.tmp/ssl/{{ service.service }}.{{ players[service.player].domain }}.{{ ssl.conf.exts.key }}"
   when: (service.name in with_services or 'all' in with_services) and (service.ssl | d(None) and service.ssl.private_keys | d(None))
   tags: ['build_context', 'build_ssl']

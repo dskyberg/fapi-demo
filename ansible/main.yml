@@ -13,7 +13,9 @@
 
     - name: Include DNS Vars
       include_vars:
-        file: "{{base_dir}}/conf.d/dns.d/01.dns.yml"
+        dir: "{{base_dir}}/conf.d/dns.d"
+        extensions:  ['yaml', 'yml']
+        name: dns
       tags: always
 
     - name: Include Player Vars
@@ -32,19 +34,20 @@
     - name: Include Docker Vars
       include_vars:
         dir: "{{base_dir}}/conf.d/docker.d"
+        extensions: ['yaml', 'yml']
         name: docker
       tags: always
 
     - name: Include SSL Vars
       include_vars:
         dir: "{{base_dir}}/conf.d/ssl.d"
-        name: ssl
         extensions: ['yaml', 'yml']
+        name: ssl
       tags: always
 
     - name: Set SSL Build Folder
       set_fact:
-        ssl_out_dir: "{{ project.rootDir }}/{{ project.buildDir }}/{{ssl.conf.dir}}"
+        ssl_out_dir: "{{ project.rootDir }}/{{ project.buildDir }}/{{project.sslDir}}"
       tags: always
 
     # Load he service descriptions.

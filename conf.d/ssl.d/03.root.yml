@@ -1,0 +1,15 @@
+---
+root:
+  key_size: 4096
+  key_type: 'RSA'
+  days: 7300
+  digest: 'sha256'
+  v3Exts:
+    - name: 'subjectKeyIdentifier'
+      value: 'hash'
+    - name: 'basicConstraints'
+      critical: True
+      value: 'CA:true'
+    - name: 'keyUsage'
+      critical: True
+      value: 'digitalSignature, cRLSign, keyCertSign'

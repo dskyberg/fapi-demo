@@ -48,7 +48,7 @@
 
     - name: Set SSL Build Folder
       set_fact:
-        ssl_out_dir: "{{ project.rootDir }}/{{ project.buildDir }}/{{ssl.conf.dir}}"
+        ssl_out_dir: "{{ project.rootDir }}/{{ project.buildDir }}/{project.{sslDir}}"
       tags: always
 
     # Load he service descriptions.

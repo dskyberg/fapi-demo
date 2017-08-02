@@ -2,4 +2,5 @@
 rootDir: /Users/david/Development/fapi
 buildDir: build
 dockerDir: docker
+sslDir: ssl
 timezone: "US/Eastern"

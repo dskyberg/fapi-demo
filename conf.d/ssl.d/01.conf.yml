@@ -7,11 +7,11 @@ conf:
     key: 'key'
     csr: 'csr'
     pkcs12: 'pfx'
+  default_issuer: 'root_ca'
   dn:
     countryName: 'US'
     stateOrProvinceName: 'California'
     localityName: 'San Francisco'
-  default_issuer: 'root_ca'
   root:
     key_size: 4096
     key_type: 'RSA'

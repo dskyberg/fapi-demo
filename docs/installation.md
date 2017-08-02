@@ -22,17 +22,33 @@ If you are running on Mac OS X, follow [Install Docker for Mac](https://docs.doc
 git clone https://www.github.com/dskyberg/fapi-demo
 ```
 
-## Create a Python Virtual Environment and install Python packages
-The preferred way to manage python projects is to use Python VirtualEnv.  This
-creates an isolated Python environment, seperate from your system environent.
-The `install.sh` script in the fapi-demo root folder should do everything.
+## [OPTIONAL] Create a Python Virtual Environment
+The preferred way to manage python projects is to use
+[Python VirtualEnv](https://virtualenv.pypa.io/en/stable/).  This
+creates an isolated Python environment, seperate from your system environent. If
+you don't already have virtualenv, run the following:
 
-Run the python setup as follows:
 ```bash
-> ./install.sh
+$ [sudo] pip install virtualenv
 ```
-Once complete, and anytime you create a new terminal window, you need to run the following, to
+You can now create a local python environment by running:
+
+```bash
+$ usr/bin/env python3 /usr/local/lib/python3.5/site-packages/virtualenv.py venv
+```
 activate the Python VirtualEnv:
 ```bash
-> . ./venv/bin/activate
+$ . ./venv/bin/activate
 ```
+
+You will need to repeat this command once in any new terminal window that you want
+to run the python libs from.
+
+## Install the python dependencies
+The file `<fapi-demo>/scripts/install_python_libs.sh` has a listing of all the
+dependency libs necessary for the demo, including the Ansible libs.  Just run it:
+
+```bash
+$ ./scripts/install_python_libs.sh
+```
+Once complete, and anytime you create a new terminal window, you need to run the following, to

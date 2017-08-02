@@ -6,7 +6,7 @@ Ansible is used to manage dependencies and build the system.
 ## Table of Contents
 
 - [Installation](docs/installation.md)
-- [SSL and OAuth Key Management](docs/ssl.md)
-- [Docker Management](docs/docker.md)
+- [Configuration](conf.d/README.md)
+- [Docker Build Contexts](docker/README.md)
 - [Build the System](docs/build.md)
 - [Running the Demo](docs/run_the_demo.md)

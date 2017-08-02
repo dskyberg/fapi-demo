@@ -1,4 +1,4 @@
- # Players
+ # FAPI Demo Players and Service Configuration
 Players represents the key Open Banking actors.  Each file under `confi.d/players.d`
 represents a real world organization, or business.
 

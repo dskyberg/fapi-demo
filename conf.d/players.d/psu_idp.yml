@@ -5,7 +5,6 @@ psu_idp:
   id: 'psu_idp'
   name: "Faced In"
   domain: "facedin.com"
-  # base_cidr: '172.25.0.0/16'
   cidr: "{{ dns.base_cidr | ip_from_cidr ~ '.40.0/24' }}"
   services:
     - name: www

@@ -3,12 +3,12 @@
 ## Managing SSL and OAuth certs and keys
 The configuration data for all certs and keys is contained in the player
 configs, unders SSL.  If not specified there, the default settings, in
-[conf.d/ssl.d/01.conf.yml](conf.d/ssl.d/01.conf.yml) are used.
+[01.conf.yml](01.conf.yml) are used.
 
-## SSL Configuration File: [conf.d/ssl.d/01.conf.yml](conf.d/ssl.d/01.conf.yml)
+## SSL Configuration File: [01.conf.yml](01.conf.yml)
 Contains the following sections:
 ### dir
-This is the the top level directory (under [project.buildDir](conf.d/project.d/00.yml))
+This is the the top level directory (under [project.buildDir](../conf.d/project.d/00.yml))
 where generated certs, keys, etc. are saved.
 
 ### exts

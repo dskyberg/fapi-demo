@@ -5,7 +5,6 @@ pisp:
   id: 'pisp'
   name: "My Money, Inc."
   domain: "mymoney.com"
-#  cidr: "172.25.30.0/24"
   cidr: "{{ dns.base_cidr | ip_from_cidr ~ '.30.0/24' }}"
   services:
     - name: www

@@ -6,7 +6,6 @@ aspsp:
   id: 'aspsp'
   name: "Bank, Inc"
   domain: "bank.com"
-#  cidr: '172.25.10.0/24'
   cidr: "{{ dns.base_cidr | ip_from_cidr ~ '.10.0/24' }}"
   services:
     - name: www

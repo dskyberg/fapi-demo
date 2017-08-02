@@ -1,0 +1,108 @@
+---
+- name: "Set run path: {{ out_dir }}/{{ docker.run_dir }}/{{ service.name }}"
+  set_fact:
+    run_path: "{{ out_dir }}/{{ docker.run_dir }}/{{ service.name }}"
+  when: service.name in with_services or 'all' in with_services
+  tags: ['run']
+
+- name: "Get the player and player service config for {{ service.name }}"
+  extract_service_data:
+    players: "{{ players }}"
+    player_name: "{{ service | getattr('player') }}"
+    service_name: "{{ service | getattr('service') }}"
+  register: service_data_result
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'run' ]
+
+- name: "Set player and player service facts for {{ service.name }}"
+  set_fact:
+    player: "{{ service_data_result.player }}"
+    player_service: "{{ service_data_result.service }}"
+    player_service_ip: "{{ service_data_result.service | getattr(['dns', 'ip']) }}"
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'run' ]
+
+- name: "Create local volume folders for {{ service.name }}"
+  file:
+    path: "{{ run_path }}/{{ vol.host }}"
+    state: directory
+  with_items: "{{ service.volumes | d([]) }}"
+  loop_control:
+    loop_var: vol
+  when: service.name in with_services or 'all' in with_services
+  tags: ['run']
+
+# Ensure that any necessary files are copied to the docker build folder
+- name: "Update Run Context for {{ service.name }}"
+  copy:
+    src: "{{ target.src }}"
+    dest: "{{ target.dest }}"
+  with_items: "{{ service.run_context }}"
+  loop_control:
+    loop_var: target
+  when: (service.name in with_services or 'all' in with_services) and service.run_context | d(None)
+  register: context_result
+  tags: ['run_context', 'run']
+
+- name: "Make volume settings for {{ service.name }}"
+  set_fact:
+    service_volumes: service.volumes | d(None) | convert_volumes(base=run_path) or omit
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'run']
+
+- name: "Make DNS values for {{ service.name }}"
+  set_fact:
+    dns_servers: "{{ service | getattr('dns') and (service | getattr(['dns', 'nameServer']) or dns.nameServer.ip) }}"
+    service_ip: "{{ player | getattr('cidr') | ip_from_cidr( player_service_ip) }}"
+    hostname: "{{ service | getattr(['dns', 'hostname']) or ((player and player_service) and [player_service.name, player.domain] | join('.')) | d(None) }}"
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'run']
+
+- name: "Make network settings for {{ service.name }}"
+  set_fact:
+    networks: "{{ service | getattr('networks') or  [{'name': docker.networkName, 'ipv4_address': service_ip }] }}"
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'run']
+
+- name: "Show run command for {{ service.name }}"
+  print_docker_cmd:
+    cmd: 'run'
+    args: "{{ service }}"
+    base: "{{ run_path }}"
+  register: run_cmd
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'run']
+
+- debug:
+    var: run_cmd.cmd
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'run']
+
+- name: "Run the {{ service.name }} service"
+  docker_container_ext:
+    state: "{{ service.run_state | d('started') }}"
+    auto_remove: "{{ service.rm | d(True) }}"
+    cleanup: "{{ service.rm | d(False) }}"
+    name: "{{ service.containerName }}"
+    image: "{{ service.imageName }}"
+    capabilities: "{{ service.capabilities | d(omit) }}"
+    detach: "{{ service.detach | d(true) }}"
+    interactive: "{{ not service.detach | d(True)  }}"
+    tty: "{{ not service.detach | d(True) }}"
+    env: "{{ service.env | d(omit) }}"
+    dns_servers: "{{ dns_servers| d(omit) }}"
+    hostname: "{{  hostname | d(omit) }}"
+    networks: "{{ networks | d(omit) }}"
+    network_mode: "{{ service.network_mode | d('bridge') }}"
+    published_ports: "{{ service.ports | d(None) | convert_volumes or omit }}"
+    volumes: "{{ service.volumes | d(None) | convert_volumes(base=run_path) or omit }}"
+  when: (service.name in with_services or 'all' in with_services) and service.runnable | d(True)
+  register: image_facts
+  tags: [ 'run']
+
+- name: "Stop the {{service.name }} service"
+  docker_container_ext:
+    name: "{{ service.containerName }}"
+    state: stopped
+  when: (service.name in with_services or 'all' in with_services) and service.runnable | d(True)
+  tags: [ 'stop']

@@ -1,0 +1,9 @@
+---
+# vnc_base is used to build the vncserver.  So, it must be created early
+vnc_base:
+  name: vnc_base
+  state: present
+  runnable: False
+  imageName: "vnc_base"
+  build_args:
+    VNC_HOME: "/headless"

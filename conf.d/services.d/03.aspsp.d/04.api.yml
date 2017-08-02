@@ -1,0 +1,27 @@
+---
+aspsp_api:
+  name: aspsp_api
+  player: aspsp
+  service: api
+  pull: False
+  imageName: aspsp_api
+  containerName: aspsp_api_c
+  detach: True
+  ssl: True
+  check_stats_excludes:
+    - "node_server"
+#  networks:
+#    - name: "{{docker.networkName}}"
+#      ipv4_address: "{{dns.domains['bank.com'].api.ip}}"
+#  hostname:  "{{dns.domains['bank.com'].api.hostname}}"
+#  dns: "{{dns.nameServer.ip}}"
+  ports:
+    - host: 8080
+      container: 8080
+  env:
+    PORT: 8080
+    APP_HOME: '/opt/share'
+  volumes:
+    - host: "data"
+      container: '/opt/share'
+

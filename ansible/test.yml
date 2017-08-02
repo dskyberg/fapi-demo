@@ -1,0 +1,44 @@
+---
+- name: "all"
+  hosts: localhost
+  gather_facts: false
+  vars:
+    subnet: "172.25.0.0/16"
+    player_service_ip: 40
+    aisp:
+    id: 'aisp'
+    name: "Shop-A-Lot, Inc."
+    domain: "shopalot.com"
+    player:
+      cidr: '172.25.20.0/24'
+    players:
+      aspsp:
+        service: 'www'
+    services:
+      - name: www
+        dns:
+          hostname: www
+          ip: 10
+        ssl: True
+      - name: api
+        dns:
+          hostname: api
+          ip: 20
+        ssl: True
+      - name: auth
+        dns:
+          hostname: auth
+          ip: 30
+        ssl: True
+
+  tasks:
+
+    - name: Test ip_from_cidr
+      debug:
+        msg: "{{ player | getattr('cidr') | ip_from_cidr( player_service_ip) }}"
+      tags: always
+
+  # - name: Test getattr
+  #   debug:
+  #     msg: "{{ players | getattr(['aspsp', 'service']) }}"
+  #   tags: always

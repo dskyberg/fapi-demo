@@ -1,0 +1,6 @@
+---
+versions:
+  node: 8.1.2
+  pingfederate: 8.4.0
+  postgres: 9.6.3
+  yarn: 0.27.5

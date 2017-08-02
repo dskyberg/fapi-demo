@@ -1,0 +1,10 @@
+.vscode
+build
+.tmp
+.DO_NOT_COMMIT
+venv
+.DS_Store
+__pycache__
+pingfederate-*.zip
+data.zip
+*.lic

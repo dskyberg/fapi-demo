@@ -1,0 +1,76 @@
+---
+# Identity Provider (IDP) for Payment Service Users.  This IDP is a
+# social IDP, such as Facebood, or LinkedIn.
+psu_idp:
+  id: 'psu_idp'
+  name: "Faced In"
+  domain: "facedin.com"
+  # base_cidr: '172.25.0.0/16'
+  cidr: "{{ dns.base_cidr | ip_from_cidr ~ '.40.0/24' }}"
+  services:
+    - name: www
+      dns:
+        hostname: www
+        ip: 10
+      ssl: True
+    - name: api
+      dns:
+        hostname: api
+        ip: 20
+      ssl: True
+    - name: auth
+      dns:
+        hostname: auth
+        ip: 30
+      ssl: True
+    - name: bob
+      dns:
+        hostname: bob
+        ip: 40
+      ssl: True
+
+  users:
+    - id: "{{ '' | uuid }}"
+      ssl: True
+      first_name: Bob
+      last_name: Smith
+
+    - id: "{{ '' | uuid }}"
+      ssl: True
+      first_name: Bob
+      last_name: Smith
+
+    - id: "{{ '' |   uuid }}"
+      ssl: True
+      first_name: Mary
+      last_name: Jenkins
+
+    - id: "{{ '' |   uuid }}"
+      ssl: True
+      first_name: Banu
+      last_name: Pahlavi
+
+    - id: "{{ '' |   uuid }}"
+      ssl: True
+      first_name: Farhad
+      last_name: Abbasi
+
+    - id: "{{ '' |   uuid }}"
+      ssl: true
+      first_name: Juan
+      last_name: Valdez
+
+    - id: "{{ '' |   uuid }}"
+      ssl: True
+      first_name: Maria
+      last_name: Santos
+
+    - id: "{{ '' |   uuid }}"
+      ssl: True
+      first_name: Wei
+      last_name: Chen
+
+    - id: "{{ '' |   uuid }}"
+      ssl: True
+      first_name: Min
+      last_name: Liu

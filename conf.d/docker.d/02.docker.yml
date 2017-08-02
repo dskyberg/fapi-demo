@@ -1,0 +1,5 @@
+---
+# Docker User Network
+networkName: 'isolated_nw'
+networkSubnet: '172.25.0.0/16'
+run_dir: docker

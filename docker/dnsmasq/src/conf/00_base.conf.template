@@ -1,0 +1,10 @@
+# 00.base.conf
+domain-needed
+bogus-priv
+no-hosts
+keep-in-foreground
+no-resolv
+expand-hosts
+{% for entry in dns.servers %}
+server={{entry}}
+{% endfor %}

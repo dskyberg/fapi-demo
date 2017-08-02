@@ -1,0 +1,11 @@
+---
+- name: Set up the environment
+  include: docker_network.yml
+
+- name: Build Docker Image
+  include: docker_image.yml service="{{ services[item] }}"
+  with_items: "{{ services }}"
+
+- name: Run Docker Containers
+  include: docker_container.yml service="{{ services[item] }}"
+  with_items: "{{ services }}"

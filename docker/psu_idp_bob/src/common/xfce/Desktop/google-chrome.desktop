@@ -1,0 +1,26 @@
+[Desktop Entry]
+Version=1.0
+Name=Google Chrome
+# Only KDE 4 seems to use GenericName, so we reuse the KDE strings.
+# From Ubuntu's language-pack-kde-XX-base packages, version 9.04-20090413.
+GenericName=Web Browser
+# Gnome and KDE 3 uses Comment.
+Comment=Access the Internet
+Exec=/usr/bin/google-chrome --no-sandbox --user-data-dir=/headless/chrome-data
+Terminal=false
+X-MultipleArgs=false
+Icon=google-chrome
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml_xml;image/webp;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;
+Actions=NewWindow;NewPrivateWindow;
+
+Path=
+
+[Desktop Action NewWindow]
+Name=New Window
+Exec=/usr/bin/google-chrome --no-sandbox --user-data-dir=/headless/chrome-data
+
+[Desktop Action NewPrivateWindow]
+Name=New Incognito Window
+Exec=/usr/bin/google-chrome --no-sandbox --user-data-dir=/headless/chrome-data --incognito

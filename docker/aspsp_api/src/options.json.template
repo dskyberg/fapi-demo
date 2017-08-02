@@ -1,0 +1,11 @@
+{
+    "port": 8080,
+    "sslOpts": {
+        "key": "api.bank.com.key",
+        "cert": "api.bank.com.crt",
+        "chain": "api.bank.com.chain.crt",
+        "issuer": "ca.bank.com.crt",
+        "root": "root.cert.pem",
+        "rootNickname": "ca.root.com - Root CA, Inc"
+    }
+}

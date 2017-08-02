@@ -1,0 +1,14 @@
+---
+# A globally trusted root CA is used to establish trust across all players.
+# Each player has their own CA, which is signed by the root CA.
+# This file MUST sort to be the first file loaded under players.d.
+root_ca:
+  id: 'root_ca'
+  name: "Root CA, Inc"
+  domain: "root.com"
+  address:
+    country: US
+    locality: 'San Francisco'
+    stateOrProvince: California
+  ssl:
+      issuer: self

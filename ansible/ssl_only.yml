@@ -1,0 +1,47 @@
+---
+# This playbook is a subset of main.yml and only executes the roles/tasks
+# necessary for managing SSL certs.
+- name: "ssl_only"
+  hosts: localhost
+  gather_facts: false
+
+  pre_tasks:
+    - name: Include Project Vars
+      include_vars:
+        dir: "{{base_dir}}/conf.d/project.d"
+        extensions: ['yaml', 'yml']
+        name: project
+      tags: always
+
+    - name: Include DNS Vars
+      include_vars:
+        file: "{{base_dir}}/conf.d/dns.d/01.dns.yml"
+      tags: always
+
+    - name: Include Player Vars
+      include_vars:
+        dir: "{{base_dir}}/conf.d/players.d"
+        extensions: ['yaml', 'yml']
+        ignore_files: ['README.md']
+        name: players
+      tags: always
+
+    - name: Set Build Folder
+      set_fact:
+        out_dir: "{{ project.rootDir }}/{{ project.buildDir }}"
+      tags: always
+
+    - name: Include SSL Vars
+      include_vars:
+        dir: "{{base_dir}}/conf.d/ssl.d"
+        name: ssl
+        extensions: ['yaml', 'yml']
+      tags: always
+
+    - name: Set SSL Build Folder
+      set_fact:
+        ssl_out_dir: "{{ project.rootDir }}/{{ project.buildDir }}/{{ssl.conf.dir}}"
+      tags: always
+
+  roles:
+    - ssl

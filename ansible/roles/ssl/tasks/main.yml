@@ -1,0 +1,19 @@
+---
+- name: Make SSL CA Certs for each Player
+  include: make_ca.yml subject="{{ players[item] }}"
+  with_items: "{{ players }}"
+
+- name: Make SSL Server Certs for each Player Service
+  include: make_ssl_server_cert.yml subject="{{ item.0 }}" service="{{ item.1 }}"
+  with_subelements:
+    - "{{ players }}"
+    - services
+    - skip_missing: True
+
+- name: Make SSL User Certs
+  include: make_ssl_user_cert.yml subject="{{ item.0 }}" user="{{ item.1 }}"
+  when: item.1.ssl | d(False)
+  with_subelements:
+    - "{{ players }}"
+    - users
+    - skip_missing: True

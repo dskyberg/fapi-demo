@@ -1,0 +1,32 @@
+---
+bob:
+  name: psu_idp_bob
+  state: started
+  player: psu_idp
+  service: bob
+  pull: False
+  imageName: psu_idp_bob
+  containerName: bob
+  detach: True
+#  networks:
+#    - name: "{{docker.networkName}}"
+#      ipv4_address: "{{dns.domains['facedin.com'].vnc.ip}}"
+#  hostname:  "{{dns.domains['facedin.com'].vnc.hostname}}"
+#  dns: "{{dns.nameServer.ip}}"
+  ssl: True
+  build_args:
+    VNC_USER: vncuser
+    VNC_PW: password
+    VNC_HOME: "/headless"
+    ROOTCA: root.cert.pem
+    ROOTCA_NICKNAME: "ca.{{players.root_ca.domain}} - {{players.root_ca.name}}"
+  ports:
+    - host: 5900
+      container: 5900
+    - host: 6900
+      container: 6900
+  env:
+    VNC_COL_DEPTH: 24
+    VNC_RESOLUTION: 1280x1024
+    VNC_PASSWD: password
+

@@ -1,0 +1,5 @@
+---
+rootDir: /Users/david/Development/fapi
+buildDir: build
+dockerDir: docker
+timezone: "US/Eastern"

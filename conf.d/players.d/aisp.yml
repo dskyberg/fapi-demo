@@ -1,0 +1,24 @@
+---
+# An Account Information Service Provider is a Third Party Provider (TPP)
+# that provides Account Information Services.
+aisp:
+  id: 'aisp'
+  name: "Shop-A-Lot, Inc."
+  domain: "shopalot.com"
+  cidr: "{{ dns.base_cidr | ip_from_cidr ~ '.20.0/24' }}"
+  services:
+    - name: www
+      dns:
+        hostname: www
+        ip: 10
+      ssl: True
+    - name: api
+      dns:
+        hostname: api
+        ip: 20
+      ssl: True
+    - name: auth
+      dns:
+        hostname: auth
+        ip: 30
+      ssl: True

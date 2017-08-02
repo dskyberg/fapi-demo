@@ -1,0 +1,31 @@
+---
+# Account Services Payment Service Provider
+# An ASPSP is a Payment Service Provider (PSP) that provides and maintains
+# a payment account for a Payment Services User (PSU).
+aspsp:
+  id: 'aspsp'
+  name: "Bank, Inc"
+  domain: "bank.com"
+#  cidr: '172.25.10.0/24'
+  cidr: "{{ dns.base_cidr | ip_from_cidr ~ '.10.0/24' }}"
+  services:
+    - name: www
+      dns:
+        hostname: www
+        ip: 10
+      ssl: True
+    - name: api
+      dns:
+        hostname: api
+        ip: 20
+      ssl: True
+    - name: auth
+      dns:
+        hostname: auth
+        ip: 30
+      ssl: True
+    - name: db
+      dns:
+        hostname: db
+        ip: 40
+      ssl: False

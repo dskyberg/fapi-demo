@@ -1,0 +1,14 @@
+---
+- name: "Remove docker network"
+  docker_network:
+    state: absent
+    name: "{{ docker.networkName }}"
+  tags: ['cleanup_network', 'cleanup_docker', 'cleanup']
+
+- name: "Set up the network: {{ docker.networkName }}"
+  docker_network:
+    state: present
+    name: "{{ docker.networkName }}"
+    ipam_options:
+      subnet: "{{ docker.networkSubnet }}"
+  tags: ['run_network', 'run']

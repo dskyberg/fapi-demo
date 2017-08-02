@@ -1,0 +1,25 @@
+---
+# A Payment Initiation Service Provider is a Third Party Provider (TPP)
+# that provides payment initiation services.
+pisp:
+  id: 'pisp'
+  name: "My Money, Inc."
+  domain: "mymoney.com"
+#  cidr: "172.25.30.0/24"
+  cidr: "{{ dns.base_cidr | ip_from_cidr ~ '.30.0/24' }}"
+  services:
+    - name: www
+      dns:
+        hostname: www
+        ip: 10
+      ssl: True
+    - name: api
+      dns:
+        hostname: api
+        ip: 20
+      ssl: True
+    - name: auth
+      dns:
+        hostname: auth
+        ip: 30
+      ssl: True

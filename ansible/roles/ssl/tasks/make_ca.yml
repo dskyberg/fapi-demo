@@ -1,0 +1,153 @@
+---
+# If the player specifies an issuer in its ssl attributes, use it.  Else use root_ca
+- name: "Set issuer name fact for {{ subject.domain }}"
+  set_fact:
+    issuer_name: "{{ subject | getattr(['ssl','issuer'], 'root_ca') }}"
+  tags: ['clean_ssl', 'create_ssl_cas', 'create_ssl']
+
+- name: "Set issuer fact for {{ subject.domain }}"
+  set_fact:
+    issuer: "{{ issuer_name == 'self' and subject or players[issuer_name] }}"
+    self_signed: "{{ issuer_name == 'self' or subject.domain == players[issuer_name].domain }}"
+  tags: ['clean_ssl', 'create_ssl_cas', 'create_ssl']
+
+- name: "Set directory facts for {{ subject.domain }}"
+  set_fact:
+    subject_ca_dir: "{{ ssl_out_dir }}/{{ subject.domain }}/ca"
+    subject_certs_dir: "{{ ssl_out_dir }}/{{ subject.domain }}/certs"
+    issuer_ca_dir: "{{ ssl_out_dir }}/{{ issuer.domain }}/ca"
+  tags: ['clean_ssl', 'create_ssl_cas', 'create_ssl']
+
+- name: "Set domain facts for {{ subject.domain }}"
+  set_fact:
+    cert_path: "{{ subject_ca_dir }}/ca.{{ subject.domain }}.{{ ssl.conf.exts.cert }}"
+    issuer_cert_path:  "{{ issuer_ca_dir }}//ca.{{ issuer.domain }}.{{ ssl.conf.exts.cert }}"
+    issuer_privatekey_path:  "{{ issuer_ca_dir }}//ca.{{ issuer.domain }}.{{ ssl.conf.exts.key }}"
+  tags: ['clean_ssl', 'create_ssl_cas', 'create_ssl']
+
+- name: "Set privatekey facts for {{ subject.domain }}"
+  set_fact:
+    # If the service does not specify key_[type size] or days, use the default root (if self signed), or default intermediate
+    key_type: "{{ subject | getattr(['ssl', 'key_type']) or (self_signed and ssl.conf.root.key_type) or ssl.conf.intermediate.key_type }}"
+    key_size: "{{ subject | getattr(['ssl', 'key_size']) or (self_signed and ssl.conf.root.key_size) or ssl.conf.intermediate.key_size }}"
+    days: "{{ subject | getattr(['ssl', 'days']) or (self_signed and ssl.conf.root.days) or ssl.conf.intermediate.days }}"
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Set DN facts for {{ subject.domain }}"
+  set_fact:
+    # If the service does not specifiy the address component, use the defaults.
+    countryName: "{{ subject | getattr(['address', 'country'], ssl.conf.dn.countryName) }}"
+    stateOrProvinceName: "{{ subject | getattr(['address', 'stateOrProvince'], ssl.conf.dn.stateOrProvinceName) }}"
+    localityName: "{{ subject | getattr(['address', 'locality'], ssl.conf.dn.localityName) }}"
+    commonName: "{{ subject | getattr(['ssl', 'commonName']) or ['DNS:ca', subject.domain] | join('.') }}"
+  tags: ['clean_ssl', 'create_ssl_cas', 'create_ssl']
+
+- name: "Set X509v3 Extension facts for self signed {{ subject.domain }}"
+  set_fact:
+    v3Exts: "{{ subject | getattr(['ssl','v3Exts'], []) | merge_nv_lists(ssl.conf.root.v3Exts, False) }}"
+  when: self_signed
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Set X509v3 Extension facts for {{ subject.domain }}"
+  set_fact:
+    v3Exts: "{{ subject | getattr(['ssl','v3Exts'], []) | merge_nv_lists(ssl.conf.intermediate.v3Exts, False) }}"
+  when: not self_signed
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Remove old CA for {{ subject.domain }}"
+  file:
+    path: "{{ subject_ca_dir }}"
+    state: absent
+  tags: ['clean_ssl']
+
+- name: "Create folder: {{ subject_ca_dir }}"
+  file:
+    path: "{{ subject_ca_dir }}"
+    state: directory
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Create folder: {{ subject_certs_dir }}"
+  file:
+    path: "{{ subject_certs_dir }}"
+    state: directory
+  when: subject.services|d(None) or subject.users|d(None)
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Generate CA Private Key for {{ subject.domain }}"
+  openssl_privatekey:
+    path: "{{ subject_ca_dir }}/ca.{{ subject.domain }}.{{ ssl.conf.exts.key }}"
+    type: "{{ key_type }}"
+    size: "{{ key_size }}"
+    state: present
+  register: ca_pkey_result
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Generate CA Certificate Signing Request for {{ subject.domain }}"
+  openssl_csr_ext:
+    state: present
+    digest: "{{ subject | getattr(['ssl', 'digest']) or (self_signed and  ssl.conf.root.digest) or ssl.conf.intermediate.digest }}"
+    version: 3
+    force: "{{ ca_pkey_result | changed }}"
+    privatekey_path: "{{ subject_ca_dir }}/ca.{{ subject.domain }}.{{ ssl.conf.exts.key }}"
+    countryName: "{{ countryName }}"
+    stateOrProvinceName: "{{ stateOrProvinceName }}"
+    localityName: "{{ localityName }}"
+    organizationName: "{{ subject.name }}"
+    commonName: "ca.{{ subject.domain }}"
+    path: "{{ subject_ca_dir }}/ca.{{ subject.domain }}.{{ ssl.conf.exts.csr }}"
+  when: subject.domain != issuer.domain
+  register: ca_csr_result
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Generate Self Signed CA Certificate for {{ subject.domain }}"
+  openssl_x509:
+    state: present
+    self_signed: True
+    force: "{{ ca_pkey_result | changed }}"
+    days: "{{ days }}"
+    privatekey_path: "{{ subject_ca_dir }}/ca.{{ subject.domain }}.{{ ssl.conf.exts.key }}"
+    countryName: "{{ countryName }}"
+    stateOrProvinceName: "{{ stateOrProvinceName }}"
+    localityName: "{{ localityName }}"
+    organizationName: "{{ subject.name }}"
+    commonName: "{{ subject.domain }}"
+    v3_exts: "{{ v3Exts }}"
+    path: "{{ cert_path }}"
+  when: subject.domain == issuer.domain
+  register: ca_cert_result
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Register stat for issuer cert"
+  stat:
+    path: "{{ issuer_cert_path }}"
+  register: issuer_cert_stat
+  when: subject.domain != issuer.domain
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Register stat for subject cert"
+  stat:
+    path: "{{ cert_path }}"
+  register: cert_stat
+  when: subject.domain != issuer.domain
+  tags: ['create_ssl_cas', 'create_ssl']
+
+# This is used to force the issuer signed cert to be dependent on the issuer's certificate
+- name: "Set fact for cert file create dates"
+  set_fact:
+    cert_is_old: "{{ issuer_cert_stat | getattr(['stat', 'mtime'], 0.0) > cert_stat | getattr(['stat', 'mtime'], 0.0) }}"
+  when: subject.domain != issuer.domain
+  tags: ['create_ssl_cas', 'create_ssl']
+
+- name: "Generate Issuer Signed CA Certificate for {{ subject.domain }}"
+  openssl_x509:
+    state: present
+    path: "{{ cert_path }}"
+    force: "{{ ca_csr_result.changed or cert_is_old }}"
+    days: "{{ days }}"
+    csr_path: "{{ subject_ca_dir }}/ca.{{ subject.domain }}.{{ ssl.conf.exts.csr }}"
+    issuer_cert_path: "{{ issuer_cert_path }}"
+    issuer_privatekey_path: "{{ issuer_privatekey_path }}"
+    v3_exts: "{{ v3Exts }}"
+  when: subject.domain != issuer.domain
+  register: ca_cert_result
+  tags: ['create_ssl_cas', 'create_ssl']

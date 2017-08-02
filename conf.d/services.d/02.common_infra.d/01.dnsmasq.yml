@@ -1,0 +1,12 @@
+---
+dnsmasq:
+  name: dnsmasq
+  state: started
+  imageName: dnsmasq
+  containerName: dns
+  detach: True
+  capabilities:
+    - NET_ADMIN
+  networks:
+    - name: "{{docker.networkName}}"
+      ipv4_address: "{{ dns.nameServer.ip }}"

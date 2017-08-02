@@ -1,0 +1,10 @@
+---
+# Set up for the local DNS server.  Note, DNSMasq will resolve everything first,
+# So, you can 'borrow' dns hostnames that actually exist, if you choose.
+dns:
+  base_cidr: '172.25.0.0/16'
+  nameServer:
+    ip: '172.25.1.1'
+  servers:
+    - 8.8.8.8
+    - 8.8.4.4

@@ -1,0 +1,127 @@
+---
+- name: "Set issuer name fact for {{ user.first_name }}.{{ user.last_name }}@{{ subject.domain }}"
+  set_fact:
+    issuer_name: "{{ (user.ssl is defined and user.ssl.issuer is defined) and user.ssl.issuer or subject.id }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Set issuer fact for {{ user.first_name }}.{{ user.last_name }}@{{ subject.domain }}"
+  set_fact:
+    issuer: "{{ players[issuer_name] }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Set directory facts for {{ user.first_name }}.{{ user.last_name }}@{{ subject.domain }}"
+  set_fact:
+    subject_certs_dir: "{{ ssl_out_dir }}/{{ subject.domain }}/certs"
+    issuer_ca_dir: "{{ ssl_out_dir }}/{{ issuer.domain }}/ca"
+    # Setting email fact here, because stuff below needs it.
+    # If user does not define email, default to name components and subject domain
+    email: "{{ user.email | d(None) or user.first_name | lower + '.' + user.last_name | lower + '@' + subject.domain }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Set user facts for {{ email }}"
+  set_fact:
+    cert_path: "{{ subject_certs_dir }}/{{ email }}.{{ ssl.conf.exts.cert }}"
+    issuer_cert_path:  "{{ issuer_ca_dir }}//ca.{{ issuer.domain }}.{{ ssl.conf.exts.cert }}"
+    issuer_privatekey_path:  "{{ issuer_ca_dir }}//ca.{{ issuer.domain }}.{{ ssl.conf.exts.key }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Set privatekey facts for {{ email }}"
+  set_fact:
+    # If the service does not specify key_[type size] or days, use the default root (if self signed), or default intermediate
+    key_type: "{{ user | getattr(['ssl', 'key_type']) or ssl.conf.user.key_type }}"
+    key_size: "{{ user | getattr(['ssl', 'key_size']) or ssl.conf.user.key_size }}"
+    days: "{{ user | getattr(['ssl', 'days']) or ssl.conf.user.days }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Set DN facts for {{ email }}"
+  set_fact:
+    # If the user does not specifiy the address components, use the defaults.
+    countryName: "{{ user | getattr(['address', 'country']) or subject | getattr(['address', 'country'], ssl.conf.dn.countryName) }}"
+    stateOrProvinceName: "{{ user | getattr(['address', 'stateOrProvince']) or subject | getattr(['address', 'stateOrProvince'], ssl.conf.dn.stateOrProvinceName) }}"
+    localityName: "{{ user | getattr(['address', 'locality']) or subject | getattr(['address', 'locality'], ssl.conf.dn.localityName) }}"
+    # If not specified, set the commonName to the email
+    commonName: "{{ user | getattr(['ssl', 'commonName'], email) }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Set subjectAltName for {{ email }}"
+  set_fact:
+    subjectAltName: "{{ user | getattr(['ssl', 'v3Exts', 'subjectAltName']) or ['email', commonName] | join(':') }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Set X509v3 Extension facts for {{ email }}"
+  set_fact:
+    v3Exts: "{{ user | getattr(['ssl','v3Exts'], []) | merge_nv_lists(ssl.conf.user.v3Exts, False) | merge_nv_lists([{'name':'subjectAltName','value': subjectAltName}], True) }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Generate SSL Private Key for {{ commonName }}"
+  openssl_privatekey:
+    path: "{{ subject_certs_dir }}/{{ commonName }}.{{ ssl.conf.exts.key }}"
+    type: "{{ key_type }}"
+    size: "{{ key_size }}"
+    state: present
+  register: ssl_pkey_result
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Generate SSL Certificate Signing Request for {{ commonName }}"
+  openssl_csr_ext:
+    state: present
+    force: "{{ ssl_pkey_result | changed }}"
+    digest: "{{ user | getattr(['ssl', 'digest']) or ssl.conf.user.digest }}"
+    version: 3
+    privatekey_path: "{{subject_certs_dir}}/{{ commonName }}.{{ ssl.conf.exts.key }}"
+    countryName: "{{ countryName }}"
+    stateOrProvinceName: "{{ stateOrProvinceName }}"
+    localityName: "{{ localityName }}"
+    organizationName: "{{ subject.name }}"
+    surName: "{{ subject.last_name | d(omit)  }}"
+    givenName: "{{ subject.first_name | d(omit) }}"
+    emailAddress: "{{ email }}"
+    commonName: "{{ commonName }}"
+    subjectAltName: "{{ subjectAltName }}"
+    path: "{{subject_certs_dir}}/{{ commonName }}.{{ ssl.conf.exts.csr }}"
+  register: ssl_csr_result
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Register stat for issuer cert"
+  stat:
+    path: "{{ issuer_cert_path }}"
+  register: issuer_cert_stat
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Register stat for subject cert"
+  stat:
+    path: "{{ cert_path }}"
+  register: cert_stat
+  tags: ['create_ssl_users', 'create_ssl']
+
+# This is used to force the issuer signed cert to be dependent on the issuer's certificate
+- name: "Set fact for cert file create dates"
+  set_fact:
+    cert_is_old: "{{ issuer_cert_stat | getattr(['stat', 'mtime'], 0.0) > cert_stat | getattr(['stat', 'mtime'], 0.0) }}"
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Generate SSL Certificate and chain for {{ commonName }}"
+  openssl_x509:
+    state: present
+    force: "{{ ssl_csr_result | changed or cert_is_old }}"
+    days: "{{ days }}"
+    csr_path: "{{ subject_certs_dir }}/{{ commonName }}.{{ ssl.conf.exts.csr }}"
+    issuer_cert_path: "{{issuer_ca_dir}}/ca.{{subject.domain }}.{{ ssl.conf.exts.cert }}"
+    issuer_privatekey_path: "{{issuer_ca_dir}}/ca.{{ subject.domain }}.{{ ssl.conf.exts.key }}"
+    v3_exts: "{{ v3Exts }}"
+    path: "{{ cert_path }}"
+    chain_path: "{{ subject_certs_dir }}/{{ commonName }}.chain.{{ ssl.conf.exts.cert }}"
+  register: x509_result
+  tags: ['create_ssl_users', 'create_ssl']
+
+- name: "Generate PKCS12 file for {{ commonName }}"
+  openssl_pkcs12:
+    state: present
+    # force: "{{ x509_result | d(None) and x509_result | changed }}"
+    path: "{{ subject_certs_dir }}/{{ commonName }}.{{ ssl.conf.exts.pkcs12 }}"
+    cert_path: "{{ subject_certs_dir }}/{{ commonName }}.{{ ssl.conf.exts.cert }}"
+    privatekey_path: "{{ subject_certs_dir }}/{{ commonName }}.{{ ssl.conf.exts.key }}"
+    ca_certs_paths: "{{issuer_ca_dir}}/ca.{{ subject.domain }}.{{ ssl.conf.exts.cert }}"
+    passphrase: password
+  no_log: True
+  tags: ['create_ssl_users', 'create_ssl']

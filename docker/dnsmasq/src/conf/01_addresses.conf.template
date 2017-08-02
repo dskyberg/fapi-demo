@@ -1,0 +1,18 @@
+{% for player_name in players %}
+{% set txt_record = [] %}
+{% set player = players[player_name] %}
+{% if 'domain' in player and 'services' in player %}
+{% if txt_record.append('txt.us.' ~ player.domain) %}{% endif %}
+# {{ player.id }}
+{% set txt_record = ['txt.us.' ~ player.domain] %}
+{% for service in player['services'] %}
+{% if 'dns' in service  %}
+{% if txt_record.append(service.dns.hostname ~ '.' ~ player.domain) %}{% endif %}
+address=/{{ service.dns.hostname }}.{{ player.domain }}/{{ player.cidr[:player.cidr.rfind('.')] }}.{{ service.dns.ip }}
+{% endif %}
+{% endfor %}
+txt-record=txt.global.{{ player.domain }},us.{{ player.domain }}
+txt-record={{ txt_record | join(',') }}
+
+{% endif %}
+{% endfor %}

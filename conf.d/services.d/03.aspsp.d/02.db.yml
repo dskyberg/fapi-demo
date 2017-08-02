@@ -1,0 +1,25 @@
+---
+aspsp_db:
+  name: aspsp_db
+  player: aspsp
+  service: db
+  state: started
+  imageName: aspsp_db
+  containerName: db
+  detach: True
+#  networks:
+#    - name: "{{ docker.networkName }}"
+#      ipv4_address: "{{ players.aspsp.cidr | ip_from_cidr() domains['bank.com'].db.ip }}"
+#  hostname:  "{{ dns.domains['bank.com'].db.hostname }}"
+  dns: "{{ dns.nameServer.ip }}"
+  build_args:
+    POSTGRES_VERSION: "{{ project.versions.postgres }}"
+  env:
+    POSTGRES_USER: pingfederate
+    POSTGRES_PASSWORD: password
+  ports:
+    - host: 5432
+      container: 5432
+  volumes:
+    - host: "data"
+      container: /var/lib/postgresql/data

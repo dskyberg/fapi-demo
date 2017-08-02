@@ -1,0 +1,124 @@
+---
+- name: "Set issuer name fact for {{service.name}}.{{ subject.domain }}"
+  set_fact:
+    issuer_name: "{{ (service.ssl is defined and service.ssl.issuer is defined) and service.ssl.issuer or subject.id }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Set issuer fact for {{ service.name }}.{{ subject.domain }}"
+  set_fact:
+    issuer: "{{ players[issuer_name] }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Set directory facts for {{ service.name }}.{{ subject.domain }}"
+  set_fact:
+    subject_certs_dir: "{{ ssl_out_dir }}/{{ subject.domain }}/certs"
+    issuer_ca_dir: "{{ ssl_out_dir }}/{{ issuer.domain }}/ca"
+    server_hostname: "{{ service.name }}.{{ subject.domain }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Set service facts for {{ server_hostname }}"
+  set_fact:
+    cert_path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.cert }}"
+    issuer_cert_path:  "{{ issuer_ca_dir }}//ca.{{ issuer.domain }}.{{ ssl.conf.exts.cert }}"
+    issuer_privatekey_path:  "{{ issuer_ca_dir }}//ca.{{ issuer.domain }}.{{ ssl.conf.exts.key }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Set privatekey facts for {{ server_hostname }}"
+  set_fact:
+    # If the service does not specify key_[type size] or days, use the default root (if self signed), or default intermediate
+    key_type: "{{ service | getattr(['ssl', 'key_type']) or ssl.conf.server.key_type }}"
+    key_size: "{{ service | getattr(['ssl', 'key_size']) or ssl.conf.server.key_size }}"
+    days: "{{ subject | getattr(['ssl', 'days']) or ssl.conf.server.days }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Set DN facts for {{ server_hostname }}"
+  set_fact:
+    # If the service does not specifiy the address component, use the defaults.
+    countryName: "{{ service | getattr(['address', 'country']) or subject | getattr(['address', 'country'], ssl.conf.dn.countryName) }}"
+    stateOrProvinceName: "{{ service | getattr(['address', 'stateOrProvince']) or subject | getattr(['address', 'stateOrProvince'], ssl.conf.dn.stateOrProvinceName) }}"
+    localityName: "{{ service | getattr(['address', 'locality']) or subject | getattr(['address', 'locality'], ssl.conf.dn.localityName) }}"
+    # If not specified, set the commonName to the server_hostName
+    commonName: "{{ service | getattr(['ssl', 'commonName'], server_hostname) }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Set subjectAltName for {{ server_hostname }}"
+  set_fact:
+    subjectAltName: "{{ service | getattr(['ssl', 'v3Exts', 'subjectAltName']) or ['DNS', server_hostname] | join(':') }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Set X509v3 Extension facts for {{ server_hostname }}"
+  set_fact:
+    v3Exts: "{{ service | getattr(['ssl','v3Exts'], []) | merge_nv_lists(ssl.conf.server.v3Exts, False) | merge_nv_lists([{'name':'subjectAltName','value': subjectAltName}], True) }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Generate SSL Private Key for {{ server_hostname }}"
+  openssl_privatekey:
+    path: "{{subject_certs_dir}}/{{ server_hostname }}.{{ ssl.conf.exts.key }}"
+    type: "{{ key_type }}"
+    size: "{{ key_size }}"
+    state: present
+  register: ssl_pkey_result
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Generate SSL Certificate Signing Request for {{ server_hostname }}"
+  openssl_csr_ext:
+    state: present
+    force: "{{ ssl_pkey_result | changed }}"
+    digest: "{{ server | getattr(['ssl', 'digest']) or ssl.conf.server.digest }}"
+    version: 3
+    privatekey_path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.key }}"
+    countryName: "{{ countryName }}"
+    stateOrProvinceName: "{{ stateOrProvinceName }}"
+    localityName: "{{ localityName }}"
+    organizationName: "{{ subject.name }}"
+    commonName: "{{ commonName }}"
+    subjectAltName: "{{ subjectAltName }}"
+    path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.csr }}"
+  register: ssl_csr_result
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Register stat for issuer cert for {{ server_hostname }}"
+  stat:
+    path: "{{ issuer_cert_path }}"
+  register: issuer_cert_stat
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Register stat for subject cert for {{ server_hostname }}"
+  stat:
+    path: "{{ cert_path }}"
+  register: cert_stat
+  tags: ['create_ssl_servers', 'create_ssl']
+
+# This is used to force the issuer signed cert to be dependent on the issuer's certificate
+- name: "Set fact for cert file create dates for {{ server_hostname }}"
+  set_fact:
+    cert_is_old: "{{ issuer_cert_stat | getattr(['stat', 'mtime'], 0.0) > cert_stat | getattr(['stat', 'mtime'], 0.0) }}"
+  tags: ['create_ssl_servers', 'create_ssl']
+
+
+- name: "Generate SSL Certificate and chain for {{ server_hostname }}"
+  openssl_x509:
+    state: present
+    force: "{{ ssl_csr_result | changed or cert_is_old }}"
+    days: "{{ days }}"
+    csr_path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.csr }}"
+    issuer_cert_path: "{{issuer_ca_dir}}/ca.{{subject.domain }}.{{ ssl.conf.exts.cert }}"
+    issuer_privatekey_path: "{{issuer_ca_dir}}/ca.{{ subject.domain }}.{{ ssl.conf.exts.key }}"
+    v3_exts: "{{ v3Exts }}"
+    path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.cert }}"
+    chain_path: "{{ subject_certs_dir }}/{{ server_hostname }}.chain.{{ ssl.conf.exts.cert }}"
+  no_log: True
+  register: x509_result
+  tags: ['create_ssl_servers', 'create_ssl']
+
+- name: "Generate PKCS12 file for {{ server_hostname }}"
+  openssl_pkcs12:
+    state: present
+    force: "{{ x509_result | changed  }}"
+    path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.pkcs12 }}"
+    cert_path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.cert }}"
+    privatekey_path: "{{ subject_certs_dir }}/{{ server_hostname }}.{{ ssl.conf.exts.key }}"
+    ca_certs_paths: "{{issuer_ca_dir}}/ca.{{ subject.domain }}.{{ ssl.conf.exts.cert }}"
+    passphrase: password
+  no_log: True
+  tags: ['create_ssl_servers', 'create_ssl']

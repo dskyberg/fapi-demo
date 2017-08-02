@@ -1,0 +1,143 @@
+---
+# The 'copy' and 'template' modules do not recurse directories.
+# So, we use 'find' to get the list of files under the 'src' directory,
+# and then use 'template' or 'copy' to process into the '.tmp' directory.  The location of
+# the src, relative to {{service_path}}/src is where the resulting output
+# will be stored under {{service_path/.tmp}} (without the '.template' extension).
+# Thus:
+#    {{service_path}}
+#        src
+#            some_folder
+#                some_file.ext
+#                some_other_file.ext.template
+# will be processed and saved as:
+#    {{service_path}}
+#        .tmp
+#            some_folder
+#                some_file.ext
+#                some_other_file.ext
+#
+# All files ending in '.template' will be jinja2 processed into their
+# respective destination.  Unlike with Ansible variable files, which only use
+# jinja2 on yaml values (keys are not jinja2 processed), template files are
+# completely processed.
+#
+# All other files (not ending with '.template') are simply copied from {{service_path}}/src
+# to {{service_path}}/.tmp.
+#
+# File modes (ie, 0777) on the src files are applied to
+# the resulting file in .tmp.  Thus, if the file is an executable or script,
+# ensure it has the proper mode under src, or it won't be runnable in the
+# Docker container.
+
+- name: "Look for templates under {{service_path}}/src"
+  find:
+    paths: "{{service_path}}/src"
+    patterns: "*.template"
+    recurse: True
+  register: src_template
+  when: service.name in with_services or 'all' in with_services
+  tags: ['build_context']
+
+# The Ansible copy module does not support an exclude capability.  So, we need to
+# manually list files, then copy, so that we don't copy templates. Since we use
+# copy, we also need to ensure all folders exist.
+- name: "Ensure template file paths exist for {{ service.name }}"
+  file:
+    path: "{{ service_path }}/.tmp/{{  target.path | dirname | regex_replace(service_path ~ '/src') }}"
+    state: directory
+  with_items: "{{ src_template.files }}"
+  loop_control:
+    loop_var: target
+  when: (service.name in with_services or 'all' in with_services) and src_template.files | length > 0
+  tags: ['build_context']
+
+- name: "Process local templates for {{ service.name }}"
+  template:
+    src: "{{ target.path }}"
+    dest: "{{ service_path }}/.tmp/{{  target.path[:-9] | regex_replace(service_path ~ '/src/') }}"
+  with_items: "{{ src_template.files }}"
+  when: (service.name in with_services or 'all' in with_services) and src_template.files | length > 0
+  loop_control:
+    loop_var: target
+  register: src_template_result
+  tags: ['build_context']
+
+# Using our local 'find_ext', since the Ansible 'find' module doesn't support
+# exclude patterns
+- name: "Look for all other files under {{service_path}}/src"
+  find_ext:
+    paths: "{{service_path}}/src"
+    recurse: True
+    exclude_patterns: ['*.template']
+  register: src_copy
+  when: service.name in with_services or 'all' in with_services
+  tags: ['build_context']
+
+- name: "Ensure copy file paths exist for {{ service.name }}"
+  file:
+    path: "{{ service_path }}/.tmp/{{  target.path | dirname | regex_replace(service_path ~ '/src') }}"
+    state: directory
+  with_items: "{{ src_copy.files }}"
+  loop_control:
+    loop_var: target
+  when: (service.name in with_services or 'all' in with_services) and src_copy.files | length > 0
+  tags: ['build_context']
+
+- name: "Copy local files for {{ service.name }}"
+  copy:
+    src: "{{ target.path }}"
+    dest: "{{ service_path }}/.tmp/{{  target.path | regex_replace(service_path ~ '/src/') }}"
+  with_items: "{{ src_copy.files }}"
+  when: (service.name in with_services or 'all' in with_services) and src_copy.files | length > 0
+  loop_control:
+    loop_var: target
+  register: src_copy_result
+  tags: ['build_context']
+
+# All other files (not ending with '.template') are simply copied from {{service_path}}/src
+# to {{service_path}}/.tmp.  The mode (ie, 0777) of the file in src is applied to
+# the resulting file in .tmp.  So, if the file is an executable or script,
+# ensure it has the proper mode under src.
+
+# Ensure that any necessary files are copied to the docker build folder
+- name: "Ensure build_context paths exist for {{ service.name }}"
+  file:
+    path: "{{ service_path }}/.tmp/{{ target.dest | dirname }}"
+    state: directory
+  with_items: "{{ service.build_context }}"
+  loop_control:
+    loop_var: target
+  when: (service.name in with_services or 'all' in with_services) and service.build_context | d(None)
+  register: context_path_result
+  tags: ['build_context']
+
+- name: "Handle templates for build_context files for {{ service.name }}"
+  template:
+    src: "{{ target.src }}"
+    dest: "{{ service_path }}/.tmp/{{ target.dest }}"
+  with_items: '{{ service.build_context | selectattr_ext("type", match="copy", default=True) }}'
+  loop_control:
+    loop_var: target
+  when: (service.name in with_services or 'all' in with_services) and service.build_context | d(None) and target.type | d('copy') == 'template'
+  register: context_template_result
+  tags: ['build_context']
+
+- name: "Handle copy for build_context files for {{ service.name }}"
+  copy:
+    src: "{{ target.src }}"
+    dest: "{{ service_path }}/.tmp/{{ target.dest }}"
+  with_items: '{{ service.build_context | selectattr_ext("type", match="copy", default=True) }}'
+  loop_control:
+    loop_var: target
+  when: (service.name in with_services or 'all' in with_services) and service.build_context | d(None) and target.type | d('copy') == 'copy'
+  register: context_copy_result
+  tags: ['build_context']
+
+# If any action above resulted in files under .tmp being added or modified, the
+# set the build_context_changed flag
+- name: "Set context_result_change for {{ service.name }}"
+  set_fact:
+    build_context_changed: "{{ src_template_result | d({}) | changed or src_copy_result | d({}) | changed or context_path_result | d({}) | changed or context_template_result  | d({}) | changed or context_copy_result | d({}) | changed}}"
+  when: service.name in with_services or 'all' in with_services
+  tags: ['build_context', 'build_images']

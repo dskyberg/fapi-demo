@@ -1,0 +1,72 @@
+---
+- name: "Set the current service path: {{ project.rootDir }}/{{ project.dockerDir }}/{{ service.name }}"
+  set_fact:
+    service_path: "{{ project.rootDir }}/{{ project.dockerDir }}/{{ service.name }}"
+  when: service.name in with_services or 'all' in with_services
+  tags: ['cleanup_context', 'cleanup', 'build_context', 'build_images']
+
+- name: "Cleanup the temporary context paths"
+  file:
+    path: "{{ service_path}}/.tmp"
+    state: absent
+  when: service.name in with_services or 'all' in with_services
+  tags: ['cleanup_context', 'cleanup' ]
+
+- name: Include the context tasks
+  include: "context/build_context.yml"
+
+- name: Include SSL tasks
+  include: "ssl/build_ssl.yml"
+
+- name: "Get facts for {{ service.name }}"
+  docker_image_facts:
+    name: "{{ service.imageName }}"
+  register: image_facts
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'build_images']
+
+# Compare the mtime of all files in the Docker context directory (service_path)
+# against the creation time of the current image, if it exists. Use this to force
+# rebuilding the image on change.
+# Note: If we already know something changed, via the build_context tasks, then
+# don't bother evaluating the times.
+- name: "Check context dates for {{service.name }}"
+  docker_context_stat:
+    path: "{{ service_path }}"
+    base_time: "{{image_facts.images|length > 0 and image_facts.images[0].Created or None }}"
+    excludes: "{{ service.check_stats_excludes | d([]) }}"
+  register: context_stat_result
+  when: service.name in with_services or 'all' in with_services and not build_context_changed | d(False)
+  tags: ['build_images']
+
+# #- name: "Show changes in Context for {{service.name }}"
+# #  debug:
+# #    var: context_stat_result
+# #  when: (service.name in with_services or 'all' in with_services) and context_stat_result.changed
+# #  tags: ['build_images']
+
+- name: "Show build command for {{ service.name }}"
+  print_docker_cmd:
+    cmd: 'build'
+    args: "{{ service }}"
+    base: "{{ service_path }}"
+  register: build_cmd
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'build_images']
+
+- debug:
+    var: build_cmd.cmd
+  when: service.name in with_services or 'all' in with_services
+  tags: [ 'build_images']
+
+- name: "Build Docker Image for {{service.name}}"
+  docker_image:
+    state: "{{ service.build_state | d('present') }}"
+    pull: "{{ service.pull | d(True) }}"
+    force: "{{ build_context_changed | d(False) or context_stat_result | changed}}"
+    name: "{{ service.imageName }}"
+    path: "{{ project.rootDir }}/{{ project.dockerDir }}/{{ service.name }}"
+    buildargs: "{{ service.build_args | d({}) }}"
+    dockerfile: "{{ service.dockerfile | d('Dockerfile') }}"
+  when: service.name in with_services or 'all' in with_services
+  tags: ['build_images']

@@ -32,5 +32,5 @@ are currently defined:
   - all: This is the default, and runs all tasks in the playbook.
 
 - --service: Limit execution to the named service. If not provided, all services
-will be executed. The services are defined in [conf.d/services.d](../confd.services.d/README.md).
+will be executed. The services are defined in [conf.d/services.d](../conf.d.services.d/README.md).
 

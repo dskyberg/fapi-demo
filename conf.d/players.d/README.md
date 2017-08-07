@@ -1,5 +1,5 @@
  # FAPI Demo Players and Service Configuration
-Players represents the key Open Banking actors.  Each file under [confi.d/players.d](../conf.d/players.d)
+Players represents the key Open Banking actors.  Each file under [conf.d/players.d](../players.d)
 represents a real world organization, or business.
 
 The key values under each player are:
@@ -9,7 +9,7 @@ The key values under each player are:
     - domain: DNS domain that will be listed in dnsmasq
     - cidr: CIDR block used for dnsmasq.  Absent if the player has no services.
     - address: [OPTIONAL] If present, these attributes ovverride the default address
-      in [SSL config](../conf.d/ssl.d/01.conf.yml) for all purposes, such as
+      in [SSL config](../ssl.d/01.conf.yml) for all purposes, such as
       DN attributes, and web app 'About' pages.
     - ssl: SSL parameters for the player's  [CA](ca).
 

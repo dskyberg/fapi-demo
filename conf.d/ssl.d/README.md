@@ -8,7 +8,7 @@ configs, unders SSL.  If not specified there, the default settings, in
 ## SSL Configuration File: [01.conf.yml](01.conf.yml)
 Contains the following sections:
 ### dir
-This is the the top level directory (under [project.buildDir](../conf.d/project.d/00.yml))
+This is the the top level directory (under [project.buildDir](../conf.d/project.d/00.conf.yml))
 where generated certs, keys, etc. are saved.
 
 ### exts

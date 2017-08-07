@@ -51,4 +51,6 @@ dependency libs necessary for the demo, including the Ansible libs.  Just run it
 ```bash
 $ ./scripts/install_python_libs.sh
 ```
-Once complete, and anytime you create a new terminal window, you need to run the following, to
+## Update the Config
+In [conf.d/project.d/00.conf.yml](../conf.d/project.d/00.conf.yml), change the
+value of `rootDir` to the location you cloned the repo into.

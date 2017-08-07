@@ -1,7 +1,7 @@
 ---
 # Node is used to build the api server.  So, it must be created before
 # building the bank API service.
-node:
+node_base:
   name: node_base
   runnable: False
   imageName: "node_base"

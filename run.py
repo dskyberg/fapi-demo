@@ -4,7 +4,15 @@ import sys
 from subprocess import run
 import json
 import argparse
+from scripts.list_tags import TagLister
+PLAYBOOKS = [
+  'ssl_only',
+  'docker_only'
+]
 
+DEMO_SERVICES = [
+
+]
 
 class AnsibleCommand(object):
     def __init__(self, playbook='main.yml'):
@@ -51,10 +59,11 @@ class AnsibleCommand(object):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--playbook", default="main")
-    parser.add_argument("-t", "--tag", dest="tags", action="append")
-    parser.add_argument('-s', '--service', dest="services", action="append")
+    tl = TagLister('ansible')
+    parser = argparse.ArgumentParser(description='Build and run the FAPI demo')
+    parser.add_argument("-p", "--playbook", default="main", help='The Ansible playbook to run')
+    parser.add_argument("-t", "--tag", dest="tags", action="append", choices=tl.tags, help='Determines which tasks in the playbook to execute')
+    parser.add_argument('-s', '--service', dest="services", action="append", help='Restrict tasks o specific services')
     args, unknownargs = parser.parse_known_args()
 
     ansible = AnsibleCommand(playbook='%s.yml' % args.playbook)
